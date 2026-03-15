@@ -7,6 +7,7 @@ import { getTestById } from '@/api/test.api';
 import { QuestionCard } from '@/components/QuestionCard';
 import { QuestionPalette } from '@/components/QuestionPalette';
 import { Timer } from '@/components/Timer';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -33,9 +34,11 @@ export default function TestPage() {
   const {
     currentQuestion,
     answers,
+    language,
     setCurrentQuestion,
     setAnswer,
     markForReview,
+    setLanguage,
   } = useTestStore();
 
   const { timeLeft, startTimer, resetTimer } = useTimerStore();
@@ -74,7 +77,13 @@ export default function TestPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">{test.name}</h1>
-            <Timer />
+            <div className="flex items-center gap-4">
+              <LanguageSelector
+                selectedLanguage={language}
+                onLanguageChange={setLanguage}
+              />
+              <Timer />
+            </div>
           </div>
         </div>
       </header>
@@ -88,6 +97,7 @@ export default function TestPage() {
             <QuestionCard
               question={currentQ}
               answer={answers[currentQ.id]}
+              language={language}
               onAnswerChange={handleAnswerChange}
               onMarkForReview={handleMarkForReview}
             />

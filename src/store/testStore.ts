@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TestState, Answer, TestResult } from '@/types';
+import { TestState, Answer, TestResult, Language } from '@/types';
 import { submitTest as apiSubmitTest } from '@/api/test.api';
 
 interface TestStore extends TestState {
@@ -8,6 +8,7 @@ interface TestStore extends TestState {
   setAnswer: (questionId: string, selectedOption: number | null) => void;
   markForReview: (questionId: string, marked: boolean) => void;
   setTimeLeft: (time: number) => void;
+  setLanguage: (language: Language) => void;
   submitTest: (testId: string) => Promise<string>;
   resetTest: () => void;
 }
@@ -17,6 +18,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
   answers: {},
   timeLeft: 0,
   isSubmitted: false,
+  language: 'en',
 
   setCurrentQuestion: (question) => set({ currentQuestion: question }),
 
@@ -46,6 +48,8 @@ export const useTestStore = create<TestStore>((set, get) => ({
 
   setTimeLeft: (time) => set({ timeLeft: time }),
 
+  setLanguage: (language) => set({ language }),
+
   submitTest: async (testId: string) => {
     const state = get();
     const answers = Object.values(state.answers);
@@ -74,5 +78,6 @@ export const useTestStore = create<TestStore>((set, get) => ({
       timeLeft: 0,
       isSubmitted: false,
       resultId: undefined,
+      language: 'en',
     }),
 }));

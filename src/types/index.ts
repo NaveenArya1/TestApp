@@ -1,9 +1,20 @@
+export type Language = 'en' | 'hi';
+
 export interface Question {
   id: string;
-  question: string;
-  options: string[];
+  question: {
+    en: string;
+    hi: string;
+  };
+  options: {
+    en: string[];
+    hi: string[];
+  };
   correctAnswer: number;
-  explanation?: string;
+  explanation?: {
+    en: string;
+    hi: string;
+  };
 }
 
 export interface Test {
@@ -59,4 +70,5 @@ export interface TestState {
   answers: Record<string, Answer>;
   timeLeft: number;
   isSubmitted: boolean;
+  language: Language;
 }

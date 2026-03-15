@@ -2,11 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Question, Answer } from '@/types';
+import { Question, Answer, Language } from '@/types';
 
 interface QuestionCardProps {
   question: Question;
   answer: Answer | undefined;
+  language: Language;
   onAnswerChange: (questionId: string, selectedOption: number) => void;
   onMarkForReview: (questionId: string, marked: boolean) => void;
 }
@@ -14,6 +15,7 @@ interface QuestionCardProps {
 export function QuestionCard({
   question,
   answer,
+  language,
   onAnswerChange,
   onMarkForReview,
 }: QuestionCardProps) {
@@ -23,12 +25,12 @@ export function QuestionCard({
         <CardTitle>Question {question.id}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-4">{question.question}</p>
+        <p className="mb-4">{question.question[language]}</p>
         <RadioGroup
           value={answer?.selectedOption?.toString() || ''}
           onValueChange={(value) => onAnswerChange(question.id, parseInt(value))}
         >
-          {question.options.map((option, index) => (
+          {question.options[language].map((option, index) => (
             <div key={index} className="flex items-center space-x-2">
               <RadioGroupItem value={index.toString()} id={`option-${index}`} />
               <Label htmlFor={`option-${index}`}>{option}</Label>

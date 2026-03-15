@@ -1,30 +1,32 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/Header';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useReviewsStore } from '@/store/reviewsStore';
+import { useTestStore } from '@/store/testStore';
 import { useQuery } from '@tanstack/react-query';
-import { getResult, getTestById } from '@/api/test.api';
+import { getResult, getTestById, getReview } from '@/api/test.api';
 
 export default function ReviewPage() {
   const params = useParams();
   const resultId = params?.id as string;
 
-  if (!resultId) {
-    return <div>Invalid result ID</div>;
-  }
+  const { addReview, updateQuestionReview } = useReviewsStore();
+  const { language, setLanguage } = useTestStore();
 
   const { data: result, isLoading: loadingResult } = useQuery({
     queryKey: ['result', resultId],
     queryFn: () => getResult(resultId),
+    enabled: !!resultId,
   });
 
   const { data: test, isLoading: loadingTest } = useQuery({
@@ -33,18 +35,32 @@ export default function ReviewPage() {
     enabled: !!result,
   });
 
-  const { getReview, addReview, updateQuestionReview } = useReviewsStore();
+  const { data: existingReview, isLoading: loadingReview } = useQuery({
+    queryKey: ['review', resultId],
+    queryFn: () => getReview(resultId),
+    enabled: !!resultId,
+  });
 
-  if (loadingResult || loadingTest || !result || !test) return <div>Loading...</div>;
+  // Initialize state with defaults, will be updated when data loads
+  const [overallReview, setOverallReview] = useState('');
+  const [questionReviews, setQuestionReviews] = useState<Record<string, string>>({});
 
-  const existingReview = getReview(result.testId, resultId);
+  // Update state when review data becomes available
+  React.useEffect(() => {
+    if (existingReview) {
+      setOverallReview(existingReview.overallReview || '');
+      const qrMap = existingReview.questionReviews.reduce((acc, qr) => ({ ...acc, [qr.questionId]: qr.review }), {});
+      setQuestionReviews(qrMap);
+    }
+  }, [existingReview]);
 
-  const [overallReview, setOverallReview] = useState(existingReview?.overallReview || '');
-  const [questionReviews, setQuestionReviews] = useState<Record<string, string>>(
-    existingReview?.questionReviews.reduce((acc, qr) => ({ ...acc, [qr.questionId]: qr.review }), {}) || {}
-  );
+  if (!resultId) {
+    return <div>Invalid result ID</div>;
+  }
 
-  const handleSaveReview = () => {
+  if (loadingResult || loadingTest || loadingReview || !result || !test) return <div>Loading...</div>;
+
+  const handleSaveReview = async () => {
     const review: any = {
       testId: result.testId,
       attemptId: resultId,
@@ -52,24 +68,34 @@ export default function ReviewPage() {
       questionReviews: Object.entries(questionReviews).map(([questionId, review]) => ({ questionId, review })),
       date: new Date().toISOString(),
     };
-    if (existingReview) {
-      addReview(review);
-    } else {
-      addReview(review);
+    try {
+      await addReview(review);
+      alert('Review saved!');
+    } catch (error) {
+      alert('Failed to save review. Please try again.');
     }
-    alert('Review saved!');
   };
 
-  const handleQuestionReviewChange = (questionId: string, review: string) => {
+  const handleQuestionReviewChange = async (questionId: string, review: string) => {
     setQuestionReviews(prev => ({ ...prev, [questionId]: review }));
-    updateQuestionReview(result.testId, resultId, questionId, review);
+    try {
+      await updateQuestionReview(result.testId, resultId, questionId, review);
+    } catch (error) {
+      console.error('Failed to update question review:', error);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Answer Review</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Answer Review</h1>
+          <LanguageSelector
+            selectedLanguage={language}
+            onLanguageChange={setLanguage}
+          />
+        </div>
 
         {/* Overall Review */}
         <Card className="mb-6">
@@ -104,13 +130,13 @@ export default function ReviewPage() {
                 <AccordionContent>
                   <Card>
                     <CardHeader>
-                      <CardTitle>{q.question}</CardTitle>
+                      <CardTitle>{q.question[language]}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p><strong>Your Answer:</strong> {userAnswer?.selectedOption !== null && userAnswer?.selectedOption !== undefined ? q.options[userAnswer.selectedOption] : 'Not answered'}</p>
-                      <p><strong>Correct Answer:</strong> {q.options[q.correctAnswer]}</p>
+                      <p><strong>Your Answer:</strong> {userAnswer?.selectedOption !== null && userAnswer?.selectedOption !== undefined ? q.options[language][userAnswer.selectedOption] : 'Not answered'}</p>
+                      <p><strong>Correct Answer:</strong> {q.options[language][q.correctAnswer]}</p>
                       <Separator className="my-4" />
-                      <p><strong>Explanation:</strong> {q.explanation}</p>
+                      <p><strong>Explanation:</strong> {q.explanation?.[language]}</p>
                       <Separator className="my-4" />
                       <Label htmlFor={`review-${q.id}`}>Your review for this question:</Label>
                       <Textarea
